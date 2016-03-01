@@ -1,7 +1,8 @@
 
 F90     = pgf95
 #FFLAGS  = -Ibuild -Jbuild -g -Wall -Wno-unused-dummy-argument
-FFLAGS  = -module build -Ibuild -acc -Minfo=acc -g
+FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=tesla,cc35
+#FFLAGS  = -module build -Ibuild -acc -Minfo=acc -g
 
 all: t1.exe
 
@@ -23,3 +24,4 @@ build/%.o: %.f90
 clean: 
 	rm -rf build
 	rm -f *.o
+	rm -f t1.exe

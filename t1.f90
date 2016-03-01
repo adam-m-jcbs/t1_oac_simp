@@ -85,8 +85,10 @@ program test
   call bdf_ts_build(ts, neq, npt, rtol, atol, 3, upar)
 
   do i = 1, 11
+     !$acc kernels
      call bdf_advance(ts, neq, npt, y0, t0, y1, t1, dt, &
         .true., .false., ierr, .true.)
+     !$acc end kernels
      print *, t1, y1(:,1), ierr, errors(ierr)
      if (ierr /= BDF_ERR_SUCCESS) exit
      y0 = y1
