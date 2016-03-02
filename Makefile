@@ -1,8 +1,7 @@
 
 F90     = pgf95
 #FFLAGS  = -Ibuild -Jbuild -g -Wall -Wno-unused-dummy-argument
-FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=tesla,cc35
-#FFLAGS  = -module build -Ibuild -acc -Minfo=acc -g
+FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
 
 all: t1.exe
 
