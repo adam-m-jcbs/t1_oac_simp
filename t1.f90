@@ -82,12 +82,13 @@ program test
    !Build ncells of state data and timestepper objects, 
    !copy it to the accelerator
    allocate(upar(1, NPT))
-   !$acc enter data copyin(ts(:))
+   !!$acc enter data copyin(ts)
    do i = 1, NCELLS
       state(i,:) = [ 1.d0, 0.d0, 0.d0 ]
       rtol = 1.d-4
       atol = [ 1.d-8, 1.d-14, 1.d-6 ]
       call bdf_ts_build(ts(i), NEQ, NPT, rtol, atol, MAX_ORDER, upar)
+      !print *, i
       !ts(i)%temp_data = 2.5
        
       !In practice, you need to explicitly copy all non-scalar members of a
