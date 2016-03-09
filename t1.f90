@@ -84,12 +84,43 @@ program test
   allocate(upar(1, npt))
   call bdf_ts_build(ts, neq, npt, rtol, atol, 3, upar)
 
-  do i = 1, 11
-     !$acc kernels
+  ts%temp_data = 2.5
+  !do i = 1, 11
+  do i = 1, 2
+     print *, 't, y1(1), y1(2), y1(3), ierr, message'
+     print *, t1, y1(:,1), ierr, errors(ierr)
+
+     !In practice, you need to explicitly copy all non-scalar members of a
+     !user-defined type
+     !$acc data copy(ts, &
+     !$acc    ts%rtol,   &
+     !$acc    ts%atol,   &
+     !$acc    ts%tq,     &
+     !$acc    ts%J,      &
+     !$acc    ts%P,      &
+     !$acc    ts%z,      &
+     !$acc    ts%z0,     &
+     !$acc    ts%h,      &
+     !$acc    ts%l,      &
+     !$acc    ts%upar,   &
+     !$acc    ts%y,      &
+     !$acc    ts%yd,     &
+     !$acc    ts%rhs,    &
+     !$acc    ts%e,      &
+     !$acc    ts%e1,     &
+     !$acc    ts%ewt,    &
+     !$acc    ts%b,      &
+     !$acc    ts%ipvt,   &
+     !$acc    ts%A, t1, t0, y1, ierr, y0, t0, y1, t1, dt)
+
+     !$acc parallel
      call bdf_advance(ts, neq, npt, y0, t0, y1, t1, dt, &
         .true., .false., ierr, .true.)
-     !$acc end kernels
-     print *, t1, y1(:,1), ierr, errors(ierr)
+     !$acc end parallel
+      
+     !$acc end data
+      
+     print *, 'td: ', ts%temp_data
      if (ierr /= BDF_ERR_SUCCESS) exit
      y0 = y1
      t0 = t1

@@ -1,36 +1,42 @@
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g bl_types.f90 -o build/bl_types.o
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g bl_constants.f90 -o build/bl_constants.o
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g vddot.f -o build/vddot.o
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell bl_types.f90 -o build/bl_types.o
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell bl_constants.f90 -o build/bl_constants.o
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell vddot.f -o build/vddot.o
 vddot:
       1, Generating acc routine seq
      29, Loop is parallelizable
      44, Loop is parallelizable
      49, Loop is parallelizable
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g idamax.f -o build/idamax.o
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell idamax.f -o build/idamax.o
 idamax:
       1, Generating acc routine seq
      37, Scalar last value needed after loop for idamax at line 54
          Loop carried scalar dependence for dmax at line 38
      48, Scalar last value needed after loop for idamax at line 54
          Loop carried scalar dependence for dmax at line 49
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g dscal.f -o build/dscal.o
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell dscal.f -o build/dscal.o
 dscal:
       1, Generating acc routine seq
      33, Loop is parallelizable
      45, Loop is parallelizable
      50, Loop is parallelizable
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g daxpy.f90 -o build/daxpy.o
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell daxpy.f90 -o build/daxpy.o
 daxpy:
       4, Generating acc routine seq
      12, Loop is parallelizable
      18, Loop is parallelizable
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g dgefa.f -o build/dgefa.o
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell dgefa.f -o build/dgefa.o
 dgefa:
       1, Generating acc routine seq
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g dgesl.f -o build/dgesl.o
+     63, Loop is parallelizable
+     90, Loop is parallelizable
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell dgesl.f -o build/dgesl.o
 dgesl:
       1, Generating acc routine seq
-pgf95 -c -module build -Ibuild -acc -Minfo=acc -g bdf.f90 -o build/bdf.o
+     74, Loop is parallelizable
+     87, Loop is parallelizable
+     99, Loop is parallelizable
+    107, Loop is parallelizable
+pgf95 -c -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell bdf.f90 -o build/bdf.o
 f_rhs_vec:
      26, Generating acc routine seq
 jac_vec:
@@ -43,6 +49,7 @@ bdf_advance:
 bdf_update:
     252, Generating acc routine seq
     259, Loop is parallelizable
+    260, Loop is parallelizable
     271, Loop is parallelizable
     276, Loop is parallelizable
     305, Loop is parallelizable
@@ -73,85 +80,13 @@ bdf_solve:
          Loop carried backward dependence of ts%y$p prevents vectorization
     387, Loop is parallelizable
     389, Scalar last value needed after loop for ts at line 448
-    405, Scalar last value needed after loop for ts at line 431
-         Scalar last value needed after loop for ts at line 438
-         Scalar last value needed after loop for ts at line 439
-         Scalar last value needed after loop for ts at line 430
-         Scalar last value needed after loop for ts at line 435
-         Scalar last value needed after loop for ts at line 437
-         Scalar last value needed after loop for ts at line 441
-         Scalar last value needed after loop for ts at line 392
-         Scalar last value needed after loop for ts at line 394
-         Scalar last value needed after loop for ts at line 395
-         Scalar last value needed after loop for ts at line 398
-         Scalar last value needed after loop for ts at line 399
-         Scalar last value needed after loop for ts at line 403
-         Scalar last value needed after loop for ts at line 405
-         Scalar last value needed after loop for ts at line 421
-         Scalar last value needed after loop for ts at line 423
-         Scalar last value needed after loop for ts at line 424
-         Scalar last value needed after loop for ts at line 426
-         Scalar last value needed after loop for ts at line 448
+    405, Scalar last value needed after loop for ts at line 431,438,439,430,435,437,441,392,394,395,398,399,403,405,421,423,424,426,448
          Unknown scalar last value needed after loop at line 449
-    406, Scalar last value needed after loop for ts at line 406
-         Scalar last value needed after loop for ts at line 431
-         Scalar last value needed after loop for ts at line 438
-         Scalar last value needed after loop for ts at line 439
-         Scalar last value needed after loop for ts at line 430
-         Scalar last value needed after loop for ts at line 435
-         Scalar last value needed after loop for ts at line 437
-         Scalar last value needed after loop for ts at line 441
-         Scalar last value needed after loop for ts at line 392
-         Scalar last value needed after loop for ts at line 394
-         Scalar last value needed after loop for ts at line 395
-         Scalar last value needed after loop for ts at line 398
-         Scalar last value needed after loop for ts at line 399
-         Scalar last value needed after loop for ts at line 403
-         Scalar last value needed after loop for ts at line 405
-         Scalar last value needed after loop for ts at line 421
-         Scalar last value needed after loop for ts at line 423
-         Scalar last value needed after loop for ts at line 424
-         Scalar last value needed after loop for ts at line 426
-         Scalar last value needed after loop for ts at line 448
+    406, Scalar last value needed after loop for ts at line 406,431,438,439,430,435,437,441,392,394,395,398,399,403,405,421,423,424,426,448
          Unknown scalar last value needed after loop at line 449
-    407, Scalar last value needed after loop for ts at line 407
-         Scalar last value needed after loop for ts at line 406
-         Scalar last value needed after loop for ts at line 431
-         Scalar last value needed after loop for ts at line 438
-         Scalar last value needed after loop for ts at line 439
-         Scalar last value needed after loop for ts at line 430
-         Scalar last value needed after loop for ts at line 435
-         Scalar last value needed after loop for ts at line 437
-         Scalar last value needed after loop for ts at line 441
-         Scalar last value needed after loop for ts at line 392
-         Scalar last value needed after loop for ts at line 394
-         Scalar last value needed after loop for ts at line 395
-         Scalar last value needed after loop for ts at line 398
-         Scalar last value needed after loop for ts at line 399
-         Scalar last value needed after loop for ts at line 403
-         Scalar last value needed after loop for ts at line 405
-         Scalar last value needed after loop for ts at line 421
-         Scalar last value needed after loop for ts at line 423
-         Scalar last value needed after loop for ts at line 424
-         Scalar last value needed after loop for ts at line 426
-         Scalar last value needed after loop for ts at line 448
+    407, Scalar last value needed after loop for ts at line 407,406,431,438,439,430,435,437,441,392,394,395,398,399,403,405,421,423,424,426,448
          Unknown scalar last value needed after loop at line 449
-    426, Scalar last value needed after loop for ts at line 408
-         Scalar last value needed after loop for ts at line 411
-         Scalar last value needed after loop for ts at line 407
-         Scalar last value needed after loop for ts at line 406
-         Scalar last value needed after loop for ts at line 392
-         Scalar last value needed after loop for ts at line 394
-         Scalar last value needed after loop for ts at line 395
-         Scalar last value needed after loop for ts at line 398
-         Scalar last value needed after loop for ts at line 399
-         Scalar last value needed after loop for ts at line 403
-         Scalar last value needed after loop for ts at line 405
-         Scalar last value needed after loop for ts at line 421
-         Scalar last value needed after loop for ts at line 423
-         Scalar last value needed after loop for ts at line 424
-         Scalar last value needed after loop for ts at line 426
-         Scalar last value needed after loop for ts at line 448
+    426, Scalar last value needed after loop for ts at line 408,411,407,406,392,394,395,398,399,403,405,421,423,424,426,448
          Unknown scalar last value needed after loop at line 449
          Loop carried dependence due to exposed use of b$sd3(:),ewt$sd4(:) prevents parallelization
          Complex loop carried dependence of ts%b$p,ts%e$p prevents parallelization
@@ -172,13 +107,7 @@ bdf_correct:
 bdf_adjust:
     539, Generating acc routine seq
     548, Loop carried scalar dependence for e$a at line 560
-         Scalar last value needed after loop for ts at line 605
-         Scalar last value needed after loop for ts at line 604
-         Scalar last value needed after loop for ts at line 585
-         Scalar last value needed after loop for ts at line 594
-         Scalar last value needed after loop for ts at line 595
-         Scalar last value needed after loop for ts at line 603
-         Scalar last value needed after loop for ts at line 608
+         Scalar last value needed after loop for ts at line 605,604,585,594,595,603,608
          Unknown scalar last value needed after loop at line 610
     550, Loop is parallelizable
     560, Parallelization would require privatization of array e$a(:)
@@ -254,11 +183,9 @@ minloc:
    1009, Generating acc routine seq
    1019, Loop carried scalar dependence for cur_min at line 1020
          Scalar last value needed after loop for ret at line 1025
-pgf95 -module build -Ibuild -acc -Minfo=acc -g t1.f90 build/bl_types.o build/bl_constants.o build/vddot.o build/idamax.o build/dscal.o build/daxpy.o build/dgefa.o build/dgesl.o build/bdf.o -o t1.exe
+pgf95 -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell t1.f90 build/bl_types.o build/bl_constants.o build/vddot.o build/idamax.o build/dscal.o build/daxpy.o build/dgefa.o build/dgesl.o build/bdf.o -o t1.exe
 t1.f90:
-nvlink error   : Undefined reference to 'cudaMalloc' in 'build/bdf.o'
-nvlink error   : Undefined reference to 'cudaFree' in 'build/bdf.o'
-pgacclnk: child process exit status 2: /opt/pgi/linux86-64/15.10/bin/pgnvd
-Makefile:13: recipe for target 't1.exe' failed
-make: *** [t1.exe] Error 2
+test:
+     88, Accelerator scalar kernel generated
+         Generating copy(ierr,dt,t1,y1(:,:),t0,y0(:,:),ts)
 rm build/idamax.o build/bdf.o build/dgefa.o build/bl_types.o build/vddot.o build/dgesl.o build/daxpy.o build/bl_constants.o build/dscal.o

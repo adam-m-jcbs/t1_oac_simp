@@ -114,6 +114,7 @@ module bdf
      integer  :: k_age                      ! number of steps taken at current order
      real(dp_t) :: tq(-1:2)                 ! error coefficients (test quality)
      real(dp_t) :: tq2save
+     real(dp_t) :: temp_data
      logical  :: refactor
 
      real(dp_t), allocatable :: J(:,:,:)        ! Jacobian matrix
@@ -171,6 +172,8 @@ contains
     integer  :: k, p, m
     logical  :: retry, linitial
 
+    ts%temp_data = -1.5
+    
     !TODO: We no longer have this argument as optional, so rewrite to get rid of linitial
     linitial = initial_call
 
@@ -406,7 +409,7 @@ contains
              do m = 1, ts%neq
                 do n = 1, ts%neq
                    ts%P(n,m,p) = ts%P(n,m,p) - dt_adj * ts%J(n,m,p)
-                   !call dgefa(ts%P(:,:,p), ts%neq, ts%neq, ts%ipvt(:,p), info)
+                   call dgefa(ts%P(:,:,p), ts%neq, ts%neq, ts%ipvt(:,p), info)
                    ! lapack      call dgetrf(neq, neq, ts%P, neq, ts%ipvt, info)
                    ts%nlu    = ts%nlu + 1
                 end do
@@ -430,7 +433,7 @@ contains
           do m = 1, ts%neq
              ts%b(m,p) = c * (ts%rhs(m,p) - ts%y(m,p) + dt_adj * ts%yd(m,p))
           end do
-          !call dgesl(ts%P(:,:,p), ts%neq, ts%neq, ts%ipvt(:,p), ts%b(:,p), 0)
+          call dgesl(ts%P(:,:,p), ts%neq, ts%neq, ts%ipvt(:,p), ts%b(:,p), 0)
           ! lapack   call dgetrs ('N', neq, 1, ts%P, neq, ts%ipvt, ts%b, neq, info)
           ts%nit = ts%nit + 1
 
