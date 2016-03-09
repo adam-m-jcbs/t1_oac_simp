@@ -1,4 +1,4 @@
-! This example is based on
+! t1 is a test example based on
 !
 !   http://www.radford.edu/~thompson/vodef90web/vodef90source/Double/Prologue_Examples/example1.f90
 !
@@ -14,10 +14,15 @@
 !   on the interval from t = 0.0d0 to t = 4.d10, with initial
 !   conditions y1 = 1.0d0, y2 = y3 = 0.0d0. The problem is stiff.
 !
-! Here we're going to solve the same problem, except:
+! The original version of this test distributed with BDF solved the same
+! problem, except:
 !   * we'll evolve two solutions / initial conditions at the same time
 !   * the Jacobian will be computed using the first solution only
 !
+! This version has been adapted for developing and testing OpenACC acceleration
+! of VBDF for use in Maestro's nuclear reaction integration.  We solve the
+! problem as in example1.f90 but do so for a vector of hydro cell data.  This
+! mimics what we would do in Maestro, where loops over hydro cells are common.
 
 
 !module feval
@@ -59,84 +64,121 @@
 !end module feval
 
 program test
-  use bdf
-  implicit none
+   use bdf
+   implicit none
 
-  integer, parameter :: neq = 3
-  integer, parameter :: npt = 1
-  type(bdf_ts)  :: ts
-  double precision :: rtol(neq), atol(neq), dt
-  double precision :: y0(neq,npt), t0, y1(neq,npt), t1
-  double precision, allocatable :: upar(:,:)
+   integer, parameter :: NEQ = 3
+   integer, parameter :: NPT = 1
+   integer, parameter :: NCELLS = 64 !32**3 = 32768 is a common grid size in
+                                     !Maestro problems
+   integer, parameter :: MAX_ORDER = 3
+   type(bdf_ts)  :: ts(NCELLS)
+   double precision :: rtol(NEQ), atol(NEQ), dt
+   double precision :: y0(NEQ,NPT), t0, y1(NEQ,NPT), t1, state(NCELLS,NEQ)
+   double precision, allocatable :: upar(:,:)
 
-  integer :: i, ierr
+   integer :: i, ierr, navg
 
-  y0(:,1) = [ 1.d0, 0.d0, 0.d0 ]
-  !y0(:,2) = [ 0.98516927747181138d0, 3.3863452485889568d-5, 1.4796859075703273d-2 ]
+   !Build ncells of state data and timestepper objects, 
+   !copy it to the accelerator
+   allocate(upar(1, NPT))
+   !$acc enter data copyin(ts(:))
+   do i = 1, NCELLS
+      state(i,:) = [ 1.d0, 0.d0, 0.d0 ]
+      rtol = 1.d-4
+      atol = [ 1.d-8, 1.d-14, 1.d-6 ]
+      call bdf_ts_build(ts(i), NEQ, NPT, rtol, atol, MAX_ORDER, upar)
+      !ts(i)%temp_data = 2.5
+       
+      !In practice, you need to explicitly copy all non-scalar members of a
+      !user-defined type to the GPU
+      !$acc enter data copyin(  &
+      !$acc    ts(i)%rtol,      &
+      !$acc    ts(i)%atol,      &
+      !$acc    ts(i)%tq,        &
+      !$acc    ts(i)%J,         &
+      !$acc    ts(i)%P,         &
+      !$acc    ts(i)%z,         &
+      !$acc    ts(i)%z0,        &
+      !$acc    ts(i)%h,         &
+      !$acc    ts(i)%l,         &
+      !$acc    ts(i)%upar,      &
+      !$acc    ts(i)%y,         &
+      !$acc    ts(i)%yd,        &
+      !$acc    ts(i)%rhs,       &
+      !$acc    ts(i)%e,         &
+      !$acc    ts(i)%e1,        &
+      !$acc    ts(i)%ewt,       &
+      !$acc    ts(i)%b,         &
+      !$acc    ts(i)%ipvt,      &
+      !$acc    ts(i)%A)
+   enddo
+   !$acc enter data copyin(state(:,:))
+    
+   t0 = 0.d0
+   t1 = 0.4d0
+   dt = 1.d-8
 
-  t0 = 0.d0
-  t1 = 0.4d0
+   !Have the GPU loop over state data, with the intention of having each
+   !CUDA core execute the acc seq routine bdf_advance on a cell of hydro data
+  
+   !$acc data copy(t1, t0, y1, y0, t0, y1, t1)
+   
+   !$acc parallel loop gang vector reduction(+:navg)
+   do i = 1, NCELLS
+      !print *, 't, y1(1), y1(2), y1(3), ierr, message'
+      !print *, t1, y1(:,1), ierr, errors(ierr)
 
-  rtol = 1.d-4
-  atol = [ 1.d-8, 1.d-14, 1.d-6 ]
-  dt   = 1.d-8
-
-  allocate(upar(1, npt))
-  call bdf_ts_build(ts, neq, npt, rtol, atol, 3, upar)
-
-  ts%temp_data = 2.5
-  !do i = 1, 11
-  do i = 1, 2
-     print *, 't, y1(1), y1(2), y1(3), ierr, message'
-     print *, t1, y1(:,1), ierr, errors(ierr)
-
-     !In practice, you need to explicitly copy all non-scalar members of a
-     !user-defined type
-     !$acc data copy(ts, &
-     !$acc    ts%rtol,   &
-     !$acc    ts%atol,   &
-     !$acc    ts%tq,     &
-     !$acc    ts%J,      &
-     !$acc    ts%P,      &
-     !$acc    ts%z,      &
-     !$acc    ts%z0,     &
-     !$acc    ts%h,      &
-     !$acc    ts%l,      &
-     !$acc    ts%upar,   &
-     !$acc    ts%y,      &
-     !$acc    ts%yd,     &
-     !$acc    ts%rhs,    &
-     !$acc    ts%e,      &
-     !$acc    ts%e1,     &
-     !$acc    ts%ewt,    &
-     !$acc    ts%b,      &
-     !$acc    ts%ipvt,   &
-     !$acc    ts%A, t1, t0, y1, ierr, y0, t0, y1, t1, dt)
-
-     !$acc parallel
-     call bdf_advance(ts, neq, npt, y0, t0, y1, t1, dt, &
-        .true., .false., ierr, .true.)
-     !$acc end parallel
+      y0(:,NPT) = state(i,:)
       
-     !$acc end data
-      
-     print *, 'td: ', ts%temp_data
-     if (ierr /= BDF_ERR_SUCCESS) exit
-     y0 = y1
-     t0 = t1
-     t1 = 10*t1
-     dt = 2*ts%dt
-  end do
+      call bdf_advance(ts(i), NEQ, NPT, y0, t0, y1, t1, dt, &
+         .true., .false., ierr, .true.)
 
-  print *, ''
-  print *, 'max stats for last interval'
-  print *, 'number of steps taken      ', ts%n
-  print *, 'number of function evals   ', ts%nfe
-  print *, 'number of jacobian evals   ', ts%nje
-  print *, 'number of lu decomps       ', ts%nlu
-  print *, 'number of solver iterations', ts%nit
-  print *, 'number of solver errors    ', ts%nse
+      navg = ts(i)%n
+      !print *, 'td: ', ts%temp_data
+      !if (ierr /= BDF_ERR_SUCCESS) exit
+   end do
 
-  call bdf_ts_destroy(ts)
+   !$acc end data 
+    
+   !Clean up ncells of state data and timestepper objects
+   !$acc exit data copyout(state(:,:))
+   do i=1, npt
+      !$acc exit data delete(     &
+      !$acc    ts(i)%rtol(:),     &
+      !$acc    ts(i)%atol(:),     &
+      !$acc    ts(i)%tq(-1:2),    &
+      !$acc    ts(i)%J(:,:,:),    &
+      !$acc    ts(i)%P(:,:,:),    &
+      !$acc    ts(i)%z(:,:,:),    &
+      !$acc    ts(i)%z0(:,:,:),   &
+      !$acc    ts(i)%h(:),        &
+      !$acc    ts(i)%l(:),        &
+      !$acc    ts(i)%upar(:,:),   &
+      !$acc    ts(i)%y(:,:),      &
+      !$acc    ts(i)%yd(:,:),     &
+      !$acc    ts(i)%rhs(:,:),    &
+      !$acc    ts(i)%e(:,:),      &
+      !$acc    ts(i)%e1(:,:),     &
+      !$acc    ts(i)%ewt(:,:),    &
+      !$acc    ts(i)%b(:,:),      &
+      !$acc    ts(i)%ipvt(:,:),   &
+      !$acc    ts(i)%A(:,:))
+      call bdf_ts_destroy(ts(i))
+   end do
+
+   !WARNING! Do *not* do copyout on ts(:), it'll break
+   !$acc exit data delete(ts(:))
+     
+   !TODO: Either rewrite to get this info for each cell, or delete
+   !print *, ''
+   !print *, 'max stats for last interval'
+   navg = navg / NCELLS
+   print *, 'avg number of steps taken      ', navg
+   !print *, 'number of function evals   ', ts%nfe
+   !print *, 'number of jacobian evals   ', ts%nje
+   !print *, 'number of lu decomps       ', ts%nlu
+   !print *, 'number of solver iterations', ts%nit
+   !print *, 'number of solver errors    ', ts%nse
 
 end program test
