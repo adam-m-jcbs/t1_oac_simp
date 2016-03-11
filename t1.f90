@@ -65,6 +65,7 @@
 
 program test
    use bdf
+   use bl_types
    implicit none
 
    integer, parameter :: NEQ = 3
@@ -73,16 +74,16 @@ program test
                                      !Maestro problems
    integer, parameter :: MAX_ORDER = 3
    type(bdf_ts)  :: ts(NCELLS)
-   double precision :: rtol(NEQ), atol(NEQ), dt
-   double precision :: y0(NEQ,NPT), t0, y1(NEQ,NPT), t1, state(NCELLS,NEQ)
-   double precision, allocatable :: upar(:,:)
+   real(dp_t) :: rtol(NEQ), atol(NEQ), dt
+   real(dp_t) :: y0(NEQ,NPT), t0, y1(NEQ,NPT), t1, state(NCELLS,NEQ)
+   real(dp_t), allocatable :: upar(:,:)
 
    integer :: i, ierr, navg
 
    !Build ncells of state data and timestepper objects, 
    !copy it to the accelerator
    allocate(upar(1, NPT))
-   !!$acc enter data copyin(ts)
+   !$acc enter data copyin(ts)
    do i = 1, NCELLS
       state(i,:) = [ 1.d0, 0.d0, 0.d0 ]
       rtol = 1.d-4
@@ -96,7 +97,6 @@ program test
       !$acc enter data copyin(  &
       !$acc    ts(i)%rtol,      &
       !$acc    ts(i)%atol,      &
-      !$acc    ts(i)%tq,        &
       !$acc    ts(i)%J,         &
       !$acc    ts(i)%P,         &
       !$acc    ts(i)%z,         &
@@ -119,13 +119,13 @@ program test
    t0 = 0.d0
    t1 = 0.4d0
    dt = 1.d-8
+   print *, 'state in: ', state(1,:) 
 
    !Have the GPU loop over state data, with the intention of having each
    !CUDA core execute the acc seq routine bdf_advance on a cell of hydro data
   
-   !$acc data copy(t1, t0, y1, y0, t0, y1, t1)
-   
-   !$acc parallel loop gang vector reduction(+:navg)
+   !$acc parallel loop gang vector reduction(+:navg) private(y0,y1,ierr) &
+   !$acc    present(ts, state)
    do i = 1, NCELLS
       !print *, 't, y1(1), y1(2), y1(3), ierr, message'
       !print *, t1, y1(:,1), ierr, errors(ierr)
@@ -135,12 +135,12 @@ program test
       call bdf_advance(ts(i), NEQ, NPT, y0, t0, y1, t1, dt, &
          .true., .false., ierr, .true.)
 
+      state(i,:) = y1(:,NPT)
+
       navg = ts(i)%n
       !print *, 'td: ', ts%temp_data
       !if (ierr /= BDF_ERR_SUCCESS) exit
    end do
-
-   !$acc end data 
     
    !Clean up ncells of state data and timestepper objects
    !$acc exit data copyout(state(:,:))
@@ -148,7 +148,6 @@ program test
       !$acc exit data delete(     &
       !$acc    ts(i)%rtol(:),     &
       !$acc    ts(i)%atol(:),     &
-      !$acc    ts(i)%tq(-1:2),    &
       !$acc    ts(i)%J(:,:,:),    &
       !$acc    ts(i)%P(:,:,:),    &
       !$acc    ts(i)%z(:,:,:),    &
@@ -170,12 +169,13 @@ program test
 
    !WARNING! Do *not* do copyout on ts(:), it'll break
    !$acc exit data delete(ts(:))
-     
+    
+   print *, 'state out: ', state(1,:) 
    !TODO: Either rewrite to get this info for each cell, or delete
    !print *, ''
    !print *, 'max stats for last interval'
-   navg = navg / NCELLS
-   print *, 'avg number of steps taken      ', navg
+   !navg = navg / NCELLS  TODO: Use this once GPU code's working
+   print *, 'total number of steps taken, NCELLS: ', navg, NCELLS
    !print *, 'number of function evals   ', ts%nfe
    !print *, 'number of jacobian evals   ', ts%nje
    !print *, 'number of lu decomps       ', ts%nlu
