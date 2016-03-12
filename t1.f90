@@ -113,9 +113,10 @@ program test
       !$acc    ts(i)%b,         &
       !$acc    ts(i)%ipvt,      &
       !$acc    ts(i)%A)
+      !$acc update device(ts(i))
    enddo
    !$acc enter data copyin(state(:,:))
-   !$acc update device(ts)
+   !!$acc update device(ts)
     
    t0 = 0.d0
    t1 = 0.4d0

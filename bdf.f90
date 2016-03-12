@@ -174,8 +174,10 @@ contains
 
     ts%temp_data = -1.5
     
-    !TODO: We no longer have this argument as optional, so rewrite to get rid of linitial
-    linitial = initial_call
+    !TODO: We no longer have this argument as optional, so rewrite to get rid of linitial,
+    !or maybe just get rid of it.  Commented out for now.  I prefer to use this,
+    !but for GPU dev I'm trying to simplify.
+    !linitial = initial_call
 
     if (reset) call bdf_reset(ts, y0, dt0, reuse)
 
@@ -194,16 +196,16 @@ contains
        call bdf_update(ts)                ! update various coeffs (l, tq) based on time-step history
 
        call bdf_predict(ts)               ! predict nordsieck array using pascal matrix
-       if(linitial .and. k == 1) then
-          !This is the initial solve, so use the user's initial value, 
-          !not the predicted value.
-          do p = 1, ts%npt
-             do m = 1, ts%neq
-                !Overwrite the predicted z0 with the user's y0
-                ts%z0(m,p,0) = ts%y(m,p)
-             end do
-          end do
-       endif
+       !if(linitial .and. k == 1) then
+       !   !This is the initial solve, so use the user's initial value, 
+       !   !not the predicted value.
+       !   do p = 1, ts%npt
+       !      do m = 1, ts%neq
+       !         !Overwrite the predicted z0 with the user's y0
+       !         ts%z0(m,p,0) = ts%y(m,p)
+       !      end do
+       !   end do
+       !endif
        call bdf_solve(ts)         ! solve for y_n based on predicted y and yd
        call bdf_check(ts, retry, ierr)    ! check for solver errors and test error estimate
 
@@ -259,7 +261,10 @@ contains
     integer  :: j, o
     real(dp_t) :: a0, a0hat, a1, a2, a3, a4, a5, a6, xistar_inv, xi_inv, c, l_shift(size(ts%l))
 
-    ts%l  = 0
+    !ts%l  = 0
+    do o = 0, ts%max_order
+       ts%l(o) = 0
+    end do
     ts%tq = 0
 
     ! compute l vector
@@ -622,7 +627,7 @@ contains
     real(dp_t),   intent(in   ) :: y0(ts%neq, ts%npt), dt
     logical,      intent(in   ) :: reuse
     
-    integer :: p,m
+    integer :: p,m,o
     !interface
     !   subroutine f_rhs_vec(neq, npt, y, t, yd, upar)
     !     !$acc routine seq
@@ -650,7 +655,10 @@ contains
     ts%n  = 1
     ts%k  = 1
 
-    ts%h        = ts%dt
+    !ts%h = ts%dt
+    do o = 0, ts%max_order
+       ts%h(o) = ts%dt
+    enddo
     ts%dt_nwt   = ts%dt
     ts%refactor = .true.
 
