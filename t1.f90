@@ -142,10 +142,11 @@ program test
       !print *, 'td: ', ts%temp_data
       !if (ierr /= BDF_ERR_SUCCESS) exit
    end do
+  
     
    !Clean up ncells of state data and timestepper objects
    !$acc exit data copyout(state(:,:))
-   do i=1, npt
+   do i=1, NCELLS
       !$acc exit data delete(     &
       !$acc    ts(i)%rtol(:),     &
       !$acc    ts(i)%atol(:),     &
