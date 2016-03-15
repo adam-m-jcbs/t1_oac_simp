@@ -83,17 +83,20 @@ program test
    !Build ncells of state data and timestepper objects, 
    !copy it to the accelerator
    allocate(upar(1, NPT))
-   !$acc enter data copyin(ts)
+   !!$acc enter data copyin(ts)
+   !$acc enter data create(ts)
    do i = 1, NCELLS
       state(i,:) = [ 1.d0, 0.d0, 0.d0 ]
       rtol = 1.d-4
       atol = [ 1.d-8, 1.d-14, 1.d-6 ]
       call bdf_ts_build(ts(i), NEQ, NPT, rtol, atol, MAX_ORDER, upar)
       !print *, i
-      !ts(i)%temp_data = 2.5
+      ts(i)%temp_data = 2.5
        
       !In practice, you need to explicitly copy all non-scalar members of a
       !user-defined type to the GPU
+      !!$acc enter data copyin(ts(i))
+      !$acc update device(ts(i))
       !$acc enter data copyin(  &
       !$acc    ts(i)%rtol,      &
       !$acc    ts(i)%atol,      &
@@ -113,7 +116,6 @@ program test
       !$acc    ts(i)%b,         &
       !$acc    ts(i)%ipvt,      &
       !$acc    ts(i)%A)
-      !$acc update device(ts(i))
    enddo
    !$acc enter data copyin(state(:,:))
    !!$acc update device(ts)
@@ -132,14 +134,15 @@ program test
       !print *, 't, y1(1), y1(2), y1(3), ierr, message'
       !print *, t1, y1(:,1), ierr, errors(ierr)
 
+      ts(i)%temp_data = ts(i)%rtol(1)
       y0(:,NPT) = state(i,:)
       
-      call bdf_advance(ts(i), NEQ, NPT, y0, t0, y1, t1, dt, &
-         .true., .false., ierr, .true.)
+      !call bdf_advance(ts(i), NEQ, NPT, y0, t0, y1, t1, dt, &
+      !   .true., .false., ierr, .true.)
 
       state(i,:) = y1(:,NPT)
 
-      navg = ts(i)%n
+      navg = navg + ts(i)%n
       !print *, 'td: ', ts%temp_data
       !if (ierr /= BDF_ERR_SUCCESS) exit
    end do
@@ -147,6 +150,10 @@ program test
     
    !Clean up ncells of state data and timestepper objects
    !$acc exit data copyout(state(:,:))
+   !$acc update host(ts(1))
+   print *, 'state out 1: ', state(1,:) 
+   print *, 'temp data 1: ', ts(1)%temp_data
+   print *, 'temp data 2: ', ts(2)%temp_data
    do i=1, NCELLS
       !$acc exit data delete(     &
       !$acc    ts(i)%rtol(:),     &
@@ -173,11 +180,10 @@ program test
    !WARNING! Do *not* do copyout on ts(:), it'll break
    !$acc exit data delete(ts(:))
     
-   print *, 'state out: ', state(1,:) 
    !TODO: Either rewrite to get this info for each cell, or delete
    !print *, ''
    !print *, 'max stats for last interval'
-   !navg = navg / NCELLS  TODO: Use this once GPU code's working
+   !navg = navg / NCELLS
    print *, 'total number of steps taken, NCELLS: ', navg, NCELLS
    !print *, 'number of function evals   ', ts%nfe
    !print *, 'number of jacobian evals   ', ts%nje
