@@ -1,10 +1,18 @@
-
+#PGI
 F90     = pgf95
-#FFLAGS  = -Ibuild -Jbuild -g -Wall -Wno-unused-dummy-argument
-FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell,managed
+#FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell,managed
 #FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
 #FFLAGS  = -module build -Ibuild
+FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
 
+#GNU
+#F90     = gfortran
+#FFLAGS  = -Ibuild -Jbuild -g -Wall -Wno-unused-dummy-argument
+
+#Cray
+#F90     = ftn
+#FFLAGS  = -Ibuild -Jbuild -h msgs -h acc -lcudart
+ 
 all: t1.exe
 
 #
