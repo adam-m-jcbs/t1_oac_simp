@@ -38,7 +38,7 @@
 !    real(dp_t), intent(in   ) :: y(neq,npt), t
 !    real(dp_t), intent(  out) :: ydot(neq,npt)
 !    real(dp_t), intent(inout), optional :: upar(:,:)
-!   
+!
 !    !For the purposes of t1, npt=1
 !    ydot(1,1) = -.04d0*y(1,1) + 1.d4*y(2,1)*y(3,1)
 !    ydot(3,1) = 3.e7*y(2,1)*y(2,1)
@@ -80,10 +80,9 @@ program test
 
    integer :: i, ierr, navg
 
-   !Build ncells of state data and timestepper objects, 
-   !copy it to the accelerator
+   !Build ncells of state data and timestepper objects,
+   !create a device version of the ts array
    allocate(upar(1, NPT))
-   !!$acc enter data copyin(ts)
    !$acc enter data create(ts)
    do i = 1, NCELLS
       state(i,:) = [ 1.d0, 0.d0, 0.d0 ]
@@ -92,11 +91,54 @@ program test
       call bdf_ts_build(ts(i), NEQ, NPT, rtol, atol, MAX_ORDER, upar)
       !print *, i
       ts(i)%temp_data = 2.5
-       
-      !In practice, you need to explicitly copy all non-scalar members of a
-      !user-defined type to the GPU
-      !!$acc enter data copyin(ts(i))
-      !$acc update device(ts(i))
+
+      !Now that we've built the ts(i) object on the host, we need to update the
+      !device.  For now, this means updating each member that is not allocatable
+      !or a pointer.  Were we to do something like
+      !   acc update device(ts(i))
+      !my understanding is that this would overwrite the device's pointer
+      !address with the host's.  By updating each individual member, we instead
+      !copy host data into the corresponding device memory.
+      !$acc update device(       &
+      !$acc    ts(i)%neq,        &
+      !$acc    ts(i)%npt,        &
+      !$acc    ts(i)%max_order,  &
+      !$acc    ts(i)%max_steps,  &
+      !$acc    ts(i)%max_iters,  &
+      !$acc    ts(i)%verbose,    &
+      !$acc    ts(i)%dt_min,     &
+      !$acc    ts(i)%eta_min,    &
+      !$acc    ts(i)%eta_max,    &
+      !$acc    ts(i)%eta_thresh, &
+      !$acc    ts(i)%max_j_age,  &
+      !$acc    ts(i)%max_p_age,  &
+      !$acc    ts(i)%debug,      &
+      !$acc    ts(i)%dump_unit,  &
+      !$acc    ts(i)%t,          &
+      !$acc    ts(i)%t1,         &
+      !$acc    ts(i)%dt,         &
+      !$acc    ts(i)%dt_nwt,     &
+      !$acc    ts(i)%k,          &
+      !$acc    ts(i)%n,          &
+      !$acc    ts(i)%j_age,      &
+      !$acc    ts(i)%p_age,      &
+      !$acc    ts(i)%k_age,      &
+      !$acc    ts(i)%tq,         &
+      !$acc    ts(i)%tq2save,    &
+      !$acc    ts(i)%temp_data,  &
+      !$acc    ts(i)%refactor,   &
+      !$acc    ts(i)%nfe,        &
+      !$acc    ts(i)%nje,        &
+      !$acc    ts(i)%nlu,        &
+      !$acc    ts(i)%nit,        &
+      !$acc    ts(i)%nse,        &
+      !$acc    ts(i)%ncse,       &
+      !$acc    ts(i)%ncit,       &
+      !$acc    ts(i)%ncdtmin)
+
+      !For the dynamic data, we have to copy it in.  This will create each of
+      !these allocatables on the device, attach them to the appropriate user
+      !type, and copy the host data onto the device.
       !$acc enter data copyin(  &
       !$acc    ts(i)%rtol,      &
       !$acc    ts(i)%atol,      &
@@ -118,16 +160,15 @@ program test
       !$acc    ts(i)%A)
    enddo
    !$acc enter data copyin(state(:,:))
-   !!$acc update device(ts)
-    
+
    t0 = 0.d0
    t1 = 0.4d0
    dt = 1.d-8
-   print *, 'state in: ', state(1,:) 
+   print *, 'state in: ', state(1,:)
 
    !Have the GPU loop over state data, with the intention of having each
    !CUDA core execute the acc seq routine bdf_advance on a cell of hydro data
-  
+
    !$acc parallel loop gang vector reduction(+:navg) private(y0,y1,ierr) &
    !$acc    present(ts, state)
    do i = 1, NCELLS
@@ -136,7 +177,7 @@ program test
 
       ts(i)%temp_data = ts(i)%rtol(1)
       y0(:,NPT) = state(i,:)
-      
+
       !call bdf_advance(ts(i), NEQ, NPT, y0, t0, y1, t1, dt, &
       !   .true., .false., ierr, .true.)
 
@@ -146,12 +187,12 @@ program test
       !print *, 'td: ', ts%temp_data
       !if (ierr /= BDF_ERR_SUCCESS) exit
    end do
-  
-    
+
+
    !Clean up ncells of state data and timestepper objects
    !$acc exit data copyout(state(:,:))
    !$acc update host(ts(1))
-   print *, 'state out 1: ', state(1,:) 
+   print *, 'state out 1: ', state(1,:)
    print *, 'temp data 1: ', ts(1)%temp_data
    print *, 'temp data 2: ', ts(2)%temp_data
    do i=1, NCELLS
@@ -179,7 +220,7 @@ program test
 
    !WARNING! Do *not* do copyout on ts(:), it'll break
    !$acc exit data delete(ts(:))
-    
+
    !TODO: Either rewrite to get this info for each cell, or delete
    !print *, ''
    !print *, 'max stats for last interval'
