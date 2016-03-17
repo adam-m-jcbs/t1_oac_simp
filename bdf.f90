@@ -666,7 +666,7 @@ contains
     !ts%temp_data = ts%y(1,1)
     do p = 1, ts%npt
        do m = 1, ts%neq
-          ts%y(m,p) = 1.0 ! y0(m,p)
+          ts%y(m,p) = y0(m,p)
        end do
     end do
     ts%dt = dt
@@ -1033,7 +1033,7 @@ contains
     integer :: i
 
     !shifted_arr = 0.0
-    do i = 1, size(arr) - sh
+    do i = 1, size(shifted_arr)
        shifted_arr(i) = 0.0
     enddo
 
