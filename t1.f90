@@ -89,7 +89,6 @@ program test
       rtol = 1.d-4
       atol = [ 1.d-8, 1.d-14, 1.d-6 ]
       call bdf_ts_build(ts(i), NEQ, NPT, rtol, atol, MAX_ORDER, upar)
-      !print *, i
       ts(i)%temp_data = 2.5
 
       !Now that we've built the ts(i) object on the host, we need to update the
@@ -148,6 +147,7 @@ program test
       !$acc    ts(i)%z0,        &
       !$acc    ts(i)%h,         &
       !$acc    ts(i)%l,         &
+      !$acc    ts(i)%shift,     &
       !$acc    ts(i)%upar,      &
       !$acc    ts(i)%y,         &
       !$acc    ts(i)%yd,        &
@@ -175,7 +175,8 @@ program test
       !print *, 't, y1(1), y1(2), y1(3), ierr, message'
       !print *, t1, y1(:,1), ierr, errors(ierr)
 
-      ts(i)%temp_data = ts(i)%rtol(1)
+      !ts(i)%temp_data = ts(i)%rtol(1)
+      ts(i)%temp_data = -3.5
       y0(:,NPT) = state(i,:)
 
       !call bdf_advance(ts(i), NEQ, NPT, y0, t0, y1, t1, dt, &
@@ -191,7 +192,8 @@ program test
 
    !Clean up ncells of state data and timestepper objects
    !$acc exit data copyout(state(:,:))
-   !$acc update host(ts(1))
+   !TODO: You will have to explicitly update all data members you want on host
+   !$acc update host(ts(1)%temp_data)
    print *, 'state out 1: ', state(1,:)
    print *, 'temp data 1: ', ts(1)%temp_data
    print *, 'temp data 2: ', ts(2)%temp_data
@@ -205,6 +207,7 @@ program test
       !$acc    ts(i)%z0(:,:,:),   &
       !$acc    ts(i)%h(:),        &
       !$acc    ts(i)%l(:),        &
+      !$acc    ts(i)%shift(:),    &
       !$acc    ts(i)%upar(:,:),   &
       !$acc    ts(i)%y(:,:),      &
       !$acc    ts(i)%yd(:,:),     &
