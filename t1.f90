@@ -164,6 +164,7 @@ program test
    t0 = 0.d0
    t1 = 0.4d0
    dt = 1.d-8
+   navg=0
    print *, 'state in: ', state(1,:)
 
    !Have the GPU loop over state data, with the intention of having each
@@ -179,8 +180,8 @@ program test
       ts(i)%temp_data = -3.5
       y0(:,NPT) = state(i,:)
 
-      !call bdf_advance(ts(i), NEQ, NPT, y0, t0, y1, t1, dt, &
-      !   .true., .false., ierr, .true.)
+      call bdf_advance(ts(i), NEQ, NPT, y0, t0, y1, t1, dt, &
+         .true., .false., ierr, .true.)
 
       state(i,:) = y1(:,NPT)
 

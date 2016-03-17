@@ -178,18 +178,18 @@ contains
     integer  :: k, p, m
     logical  :: retry, linitial
 
-    !ts%temp_data = ts%rtol(1)
+    ts%temp_data = bdf_max_iters !ts%rtol(1)
      
     !TODO: We no longer have this argument as optional, so rewrite to get rid of linitial,
     !or maybe just get rid of it.  Commented out for now.  I prefer to use this,
     !but for GPU dev I'm trying to simplify.
     !linitial = initial_call
 
-    !if (reset) call bdf_reset(ts, y0, dt0, reuse)
+    if (reset) call bdf_reset(ts, y0, dt0, reuse)
 
-    !ierr = BDF_ERR_SUCCESS
+    ierr = BDF_ERR_SUCCESS
 
-    !ts%t1 = t1; ts%t = t0; ts%ncse = 0; ts%ncdtmin = 0;
+    ts%t1 = t1; ts%t = t0; ts%ncse = 0; ts%ncdtmin = 0;
     do k = 1, bdf_max_iters + 1
        if (ts%n > ts%max_steps .or. k > bdf_max_iters) then
           ierr = BDF_ERR_MAXSTEPS; return
@@ -199,35 +199,35 @@ contains
        !if (k == 1) &
        !     call bdf_dump(ts)
 
-       !call bdf_update(ts)                ! update various coeffs (l, tq) based on time-step history
+       call bdf_update(ts)                ! update various coeffs (l, tq) based on time-step history
 
-       !call bdf_predict(ts)               ! predict nordsieck array using pascal matrix
-       !!if(linitial .and. k == 1) then
-       !!   !This is the initial solve, so use the user's initial value, 
-       !!   !not the predicted value.
-       !!   do p = 1, ts%npt
-       !!      do m = 1, ts%neq
-       !!         !Overwrite the predicted z0 with the user's y0
-       !!         ts%z0(m,p,0) = ts%y(m,p)
-       !!      end do
-       !!   end do
-       !!endif
-       !call bdf_solve(ts)         ! solve for y_n based on predicted y and yd
-       !call bdf_check(ts, retry, ierr)    ! check for solver errors and test error estimate
+       call bdf_predict(ts)               ! predict nordsieck array using pascal matrix
+       !if(linitial .and. k == 1) then
+       !   !This is the initial solve, so use the user's initial value, 
+       !   !not the predicted value.
+       !   do p = 1, ts%npt
+       !      do m = 1, ts%neq
+       !         !Overwrite the predicted z0 with the user's y0
+       !         ts%z0(m,p,0) = ts%y(m,p)
+       !      end do
+       !   end do
+       !endif
+       call bdf_solve(ts)         ! solve for y_n based on predicted y and yd
+       call bdf_check(ts, retry, ierr)    ! check for solver errors and test error estimate
 
-       !if (ierr /= BDF_ERR_SUCCESS) return
-       !!TODO: cycle statements may lead to bad use of coalesced memory in OpenACC (or busy waiting),
-       !!look into this when tuning
-       !if (retry) cycle
+       if (ierr /= BDF_ERR_SUCCESS) return
+       !TODO: cycle statements may lead to bad use of coalesced memory in OpenACC (or busy waiting),
+       !look into this when tuning
+       if (retry) cycle
 
-       !call bdf_correct(ts)               ! new solution looks good, correct history and advance
+       call bdf_correct(ts)               ! new solution looks good, correct history and advance
 
-       !!call bdf_dump(ts)
-       !!TODO: exit statements may lead to bad use of coalesced memory in OpenACC (or busy waiting),
-       !!look into this when tuning
-       !if (ts%t >= t1) exit
+       !call bdf_dump(ts)
+       !TODO: exit statements may lead to bad use of coalesced memory in OpenACC (or busy waiting),
+       !look into this when tuning
+       if (ts%t >= t1) exit
 
-       !call bdf_adjust(ts)                ! adjust step-size/order
+       call bdf_adjust(ts)                ! adjust step-size/order
     end do
 
     !TODO: GPUs don't like print statements.  Either delete this or work up alternative implementations
@@ -663,37 +663,37 @@ contains
     ts%nse = 0
 
     !ts%y  = y0
-    ts%temp_data = ts%y(1,1)
+    !ts%temp_data = ts%y(1,1)
     do p = 1, ts%npt
        do m = 1, ts%neq
-          !ts%y(m,p) = 1.0 ! y0(m,p)
+          ts%y(m,p) = 1.0 ! y0(m,p)
        end do
     end do
-    !ts%dt = dt
-    !ts%n  = 1
-    !ts%k  = 1
+    ts%dt = dt
+    ts%n  = 1
+    ts%k  = 1
 
-    !!ts%h = ts%dt
-    !do o = 0, ts%max_order
-    !   ts%h(o) = ts%dt
-    !enddo
-    !ts%dt_nwt   = ts%dt
-    !ts%refactor = .true.
+    !ts%h = ts%dt
+    do o = 0, ts%max_order
+       ts%h(o) = ts%dt
+    enddo
+    ts%dt_nwt   = ts%dt
+    ts%refactor = .true.
 
-    !call f_rhs_vec(ts%neq, ts%npt, ts%y, ts%t, ts%yd, ts%upar)
-    !ts%nfe = ts%nfe + 1
+    call f_rhs_vec(ts%neq, ts%npt, ts%y, ts%t, ts%yd, ts%upar)
+    ts%nfe = ts%nfe + 1
 
-    !ts%z(:,:,0) = ts%y
-    !ts%z(:,:,1) = ts%dt * ts%yd
+    ts%z(:,:,0) = ts%y
+    ts%z(:,:,1) = ts%dt * ts%yd
 
-    !ts%k_age = 0
-    !if (.not. reuse) then
-    !   ts%j_age = ts%max_j_age + 1
-    !   ts%p_age = ts%max_p_age + 1
-    !else
-    !   ts%j_age = 0
-    !   ts%p_age = 0
-    !end if
+    ts%k_age = 0
+    if (.not. reuse) then
+       ts%j_age = ts%max_j_age + 1
+       ts%p_age = ts%max_p_age + 1
+    else
+       ts%j_age = 0
+       ts%p_age = 0
+    end if
 
   end subroutine bdf_reset
 
