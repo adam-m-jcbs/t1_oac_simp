@@ -221,6 +221,7 @@ program test
       !$acc    ts(i)%A(:,:))
       call bdf_ts_destroy(ts(i))
    end do
+   deallocate(upar)
 
    !WARNING! Do *not* do copyout on ts(:), it'll break
    !$acc exit data delete(ts(:))

@@ -910,7 +910,8 @@ contains
     real(dp_t),     intent(in   ) :: rtol(neq), atol(neq)
     real(dp_t),     intent(in   ) :: upar(:,:)
 
-    integer :: k, U(max_order+1, max_order+1), Uk(max_order+1, max_order+1)
+    integer :: U(max_order+1, max_order+1), Uk(max_order+1, max_order+1)
+    integer :: k, n
 
 
     allocate(ts%rtol(neq))
@@ -949,8 +950,10 @@ contains
 
     ts%k = -1
 
-    ts%rtol = rtol
-    ts%atol = atol
+    do n = 1, neq
+       ts%rtol(n) = rtol(n)
+       ts%atol(n) = atol(n)
+    end do
 
     ts%J  = 0
     ts%P  = 0
