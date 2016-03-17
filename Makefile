@@ -1,9 +1,11 @@
 #PGI
-F90     = pgf95
+F90     = ftn
+FFLAGS  = -module build -Ibuild -acc -Minfo=acc -ta=nvidia
+#F90     = pgf95
 #FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell,managed
 #FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
 #FFLAGS  = -module build -Ibuild
-FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
+#FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
 
 #GNU
 #F90     = gfortran
