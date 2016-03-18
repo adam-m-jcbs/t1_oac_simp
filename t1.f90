@@ -89,7 +89,7 @@ program test
       rtol = 1.d-4
       atol = [ 1.d-8, 1.d-14, 1.d-6 ]
       call bdf_ts_build(ts(i), NEQ, NPT, rtol, atol, MAX_ORDER, upar)
-      ts(i)%temp_data = 2.5
+      ts(i)%temp_data = ts(i)%A(0,0)
 
       !Now that we've built the ts(i) object on the host, we need to update the
       !device.  For now, this means updating each member that is not allocatable
@@ -138,26 +138,26 @@ program test
       !For the dynamic data, we have to copy it in.  This will create each of
       !these allocatables on the device, attach them to the appropriate user
       !type, and copy the host data onto the device.
-      !$acc enter data copyin(  &
-      !$acc    ts(i)%rtol,      &
-      !$acc    ts(i)%atol,      &
-      !$acc    ts(i)%J,         &
-      !$acc    ts(i)%P,         &
-      !$acc    ts(i)%z,         &
-      !$acc    ts(i)%z0,        &
-      !$acc    ts(i)%h,         &
-      !$acc    ts(i)%l,         &
-      !$acc    ts(i)%shift,     &
-      !$acc    ts(i)%upar,      &
-      !$acc    ts(i)%y,         &
-      !$acc    ts(i)%yd,        &
-      !$acc    ts(i)%rhs,       &
-      !$acc    ts(i)%e,         &
-      !$acc    ts(i)%e1,        &
-      !$acc    ts(i)%ewt,       &
-      !$acc    ts(i)%b,         &
-      !$acc    ts(i)%ipvt,      &
-      !$acc    ts(i)%A)
+      !$acc enter data copyin(   &
+      !$acc    ts(i)%rtol,       &
+      !$acc    ts(i)%atol,       &
+      !$acc    ts(i)%J,          &
+      !$acc    ts(i)%P,          &
+      !$acc    ts(i)%z(:,:,0:),  &
+      !$acc    ts(i)%z0(:,:,0:), &
+      !$acc    ts(i)%h(0:),      &
+      !$acc    ts(i)%l(0:),      &
+      !$acc    ts(i)%shift(0:),  &
+      !$acc    ts(i)%upar,       &
+      !$acc    ts(i)%y,          &
+      !$acc    ts(i)%yd,         &
+      !$acc    ts(i)%rhs,        &
+      !$acc    ts(i)%e,          &
+      !$acc    ts(i)%e1,         &
+      !$acc    ts(i)%ewt,        &
+      !$acc    ts(i)%b,          &
+      !$acc    ts(i)%ipvt,       &
+      !$acc    ts(i)%A(0:,0:))
    enddo
    !$acc enter data copyin(state(:,:))
 
@@ -166,6 +166,7 @@ program test
    dt = 1.d-8
    navg=0
    print *, 'state in: ', state(1,:)
+   print *, 'A in:     ', ts(1)%A(0,0)
 
    !Have the GPU loop over state data, with the intention of having each
    !CUDA core execute the acc seq routine bdf_advance on a cell of hydro data

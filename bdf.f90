@@ -178,8 +178,8 @@ contains
     integer  :: k, p, m
     logical  :: retry, linitial
 
-    ts%temp_data = bdf_max_iters !ts%rtol(1)
-     
+    ts%temp_data = ts%A(0,0)
+    return
     !TODO: We no longer have this argument as optional, so rewrite to get rid of linitial,
     !or maybe just get rid of it.  Commented out for now.  I prefer to use this,
     !but for GPU dev I'm trying to simplify.
@@ -200,7 +200,6 @@ contains
        !     call bdf_dump(ts)
 
        call bdf_update(ts)                ! update various coeffs (l, tq) based on time-step history
-
        call bdf_predict(ts)               ! predict nordsieck array using pascal matrix
        !if(linitial .and. k == 1) then
        !   !This is the initial solve, so use the user's initial value, 
@@ -235,7 +234,12 @@ contains
     !     print '("BDF: n:",i6,", fe:",i6,", je: ",i3,", lu: ",i3,", it: ",i3,", se: ",i3,", dt: ",e15.8,", k: ",i2)', &
     !     ts%n, ts%nfe, ts%nje, ts%nlu, ts%nit, ts%nse, ts%dt, ts%k
 
-    y1 = ts%z(:,:,0)
+    !y1 = ts%z(:,:,0)
+    do p = 1, ts%npt
+       do m = 1, ts%neq
+          y1(m,p) = ts%z0(m,p,0)
+       end do
+    end do
     
   end subroutine bdf_advance
 
@@ -335,9 +339,10 @@ contains
     integer :: i, j, m, p
     do i = 0, ts%k
        do p = 1, ts%npt
-          ts%z0(:,p,i) = 0
+          !ts%z0(:,p,i) = 0
           do j = i, ts%k
              do m = 1, ts%neq
+                ts%z0(m,p,i) = 0
                 ts%z0(m,p,i) = ts%z0(m,p,i) + ts%A(i,j) * ts%z(m,p,j)
              end do
           end do
@@ -663,7 +668,6 @@ contains
     ts%nse = 0
 
     !ts%y  = y0
-    !ts%temp_data = ts%y(1,1)
     do p = 1, ts%npt
        do m = 1, ts%neq
           ts%y(m,p) = y0(m,p)
