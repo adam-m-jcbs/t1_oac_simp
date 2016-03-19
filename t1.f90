@@ -197,6 +197,7 @@ program test
    !TODO: You will have to explicitly update all data members you want on host
    !$acc update host(ts(1)%temp_data)
    print *, 'state out 1: ', state(1,:)
+   print *, 'state out 2: ', state(2,:)
    print *, 'temp data 1: ', ts(1)%temp_data
    print *, 'temp data 2: ', ts(2)%temp_data
    do i=1, NCELLS

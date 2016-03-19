@@ -30,6 +30,8 @@ program deepcopy_demo
    do i = 1, NCELLS
       ut(i)%scalar     = 200
       ut(i)%mem_arr(0) = -200. !ut(i)%scalar
+      ut(i)%mem_arr(1) = -300. !ut(i)%scalar
+      ut(i)%mem_arr(2) = -400. !ut(i)%scalar
    end do
   
    print *, 'ut sc 1 b4 update: ', ut(1)%scalar

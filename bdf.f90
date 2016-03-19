@@ -33,7 +33,7 @@ contains
    
     !For the purposes of t1, npt=1
     ydot(1,1) = -.04d0*y(1,1) + 1.d4*y(2,1)*y(3,1)
-    ydot(3,1) = 3.e7*y(2,1)*y(2,1)
+    ydot(3,1) = 3.d7*y(2,1)*y(2,1)
     ydot(2,1) = -ydot(1,1) - ydot(3,1)
   end subroutine f_rhs_vec
 
@@ -51,7 +51,7 @@ contains
     pd(1,3,1) = 1.d4*y(2,1)
     pd(2,1,1) = .04d0
     pd(2,3,1) = -pd(1,3,1)
-    pd(3,2,1) = 6.e7*y(2,1)
+    pd(3,2,1) = 6.d7*y(2,1)
     pd(2,2,1) = -pd(1,2,1) - pd(3,2,1)
   end subroutine jac_vec
 end module feval
@@ -118,7 +118,8 @@ module bdf
      integer  :: k_age                      ! number of steps taken at current order
      real(dp_t) :: tq(-1:2)                 ! error coefficients (test quality)
      real(dp_t) :: tq2save
-     real(dp_t) :: temp_data
+     !real(dp_t) :: temp_data
+     real(dp_t) :: temp_data(3,1,0:3)
      logical  :: refactor
 
      real(dp_t), allocatable :: J(:,:,:)        ! Jacobian matrix
@@ -175,11 +176,9 @@ contains
     logical,      intent(in   ) :: reset, reuse
     integer,      intent(  out) :: ierr
     logical,      intent(in   ) :: initial_call
-    integer  :: k, p, m
+    integer  :: k, p, m, n
     logical  :: retry, linitial
 
-    ts%temp_data = ts%A(0,0)
-    return
     !TODO: We no longer have this argument as optional, so rewrite to get rid of linitial,
     !or maybe just get rid of it.  Commented out for now.  I prefer to use this,
     !but for GPU dev I'm trying to simplify.
@@ -192,7 +191,8 @@ contains
     ts%t1 = t1; ts%t = t0; ts%ncse = 0; ts%ncdtmin = 0;
     do k = 1, bdf_max_iters + 1
        if (ts%n > ts%max_steps .or. k > bdf_max_iters) then
-          ierr = BDF_ERR_MAXSTEPS; return
+          !ierr = BDF_ERR_MAXSTEPS; return
+          ierr = BDF_ERR_MAXSTEPS; exit
        end if
 
        !TODO: Debug I/O not cool on GPUs. If we want to keep it, need to rewrite
@@ -214,7 +214,8 @@ contains
        call bdf_solve(ts)         ! solve for y_n based on predicted y and yd
        call bdf_check(ts, retry, ierr)    ! check for solver errors and test error estimate
 
-       if (ierr /= BDF_ERR_SUCCESS) return
+       !if (ierr /= BDF_ERR_SUCCESS) return
+       if (ierr /= BDF_ERR_SUCCESS) exit
        !TODO: cycle statements may lead to bad use of coalesced memory in OpenACC (or busy waiting),
        !look into this when tuning
        if (retry) cycle
@@ -340,9 +341,11 @@ contains
     do i = 0, ts%k
        do p = 1, ts%npt
           !ts%z0(:,p,i) = 0
+          do m = 1, ts%neq
+             ts%z0(m,p,i) = 0
+          end do
           do j = i, ts%k
              do m = 1, ts%neq
-                ts%z0(m,p,i) = 0
                 ts%z0(m,p,i) = ts%z0(m,p,i) + ts%A(i,j) * ts%z(m,p,j)
              end do
           end do
@@ -687,8 +690,14 @@ contains
     call f_rhs_vec(ts%neq, ts%npt, ts%y, ts%t, ts%yd, ts%upar)
     ts%nfe = ts%nfe + 1
 
-    ts%z(:,:,0) = ts%y
-    ts%z(:,:,1) = ts%dt * ts%yd
+    !ts%z(:,:,0) = ts%y
+    !ts%z(:,:,1) = ts%dt * ts%yd
+    do p = 1, ts%npt
+       do m = 1, ts%neq
+          ts%z(m,p,0) = ts%y(m,p)
+          ts%z(m,p,1) = ts%dt * ts%yd(m,p)
+       end do
+    end do
 
     ts%k_age = 0
     if (.not. reuse) then
