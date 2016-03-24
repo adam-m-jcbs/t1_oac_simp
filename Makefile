@@ -1,19 +1,33 @@
-#PGI
-#F90     = ftn
-#FFLAGS  = -module build -Ibuild -acc -Minfo=acc -ta=nvidia
-F90     = pgf95
-#FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell,managed
-FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
-#FFLAGS  = -module build -Ibuild -g -O0
+FCOMP ?= PGI
+ACC ?= t
 
-#GNU
-#F90     = gfortran
-#FFLAGS  = -Ibuild -Jbuild -g -Wall -Wno-unused-dummy-argument
+ifeq ($(FCOMP),PGI)
+  #PGI
+  #F90     = ftn
+  #FFLAGS  = -module build -Ibuild -acc -Minfo=acc -ta=nvidia
+  F90     = pgf95
 
-#Cray
-#F90     = ftn
-#FFLAGS  = -Ibuild -Jbuild -h msgs -h acc -lcudart
+  ifdef ACC
+    #FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell,managed
+    FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
+  else
+    FFLAGS  = -module build -Ibuild -g -O0
+  endif
+
+else ifeq ($(FCOMP),GNU)
+  #GNU
+  F90     = gfortran
+  FFLAGS  = -Ibuild -Jbuild -g -Wall -Wno-unused-dummy-argument -O0 -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero,overflow,underflow -finit-real=snan
+
+else ifeq ($(FCOMP),Cray)
+  #Cray
+  F90     = ftn
+  FFLAGS  = -Ibuild -Jbuild -h msgs -h acc -lcudart
  
+else
+  $(error ERROR: compiler $(FCOMP) invalid)
+endif
+
 all: t1.exe
 
 #
