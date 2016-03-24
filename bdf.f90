@@ -1054,7 +1054,7 @@ contains
     hi_shift = size(shifted_arr) - 1
 
     !shifted_arr = 0.0
-    do i = 1, hi_shift
+    do i = 0, hi_shift
        shifted_arr(i) = 0.0
     enddo
 
