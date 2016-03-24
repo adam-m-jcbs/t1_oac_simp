@@ -757,7 +757,6 @@ contains
     !$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     integer  :: j, o, p, m
-    !TODO: Did these always have hard-coded bounds?
     real(dp_t) :: c(0:6), c_shift(0:6)
 
     if (ts%k > 2) then
@@ -1036,30 +1035,35 @@ contains
   !
   ! A local, GPU-compiled version of intrinsic eoshift 
   ! Only what's needed for VBDF is implemented, also no
-  ! error-checking.
+  ! error-checking.  And we assume 0-based indexing for the arrays as all uses
+  ! of eoshift in bdf are with 0-based arrays.
   !
   ! NOTE: Array-valued functions are NOT allowed on the GPU (in PGI at least), had to rewrite this
   ! as a subroutine
   !
   subroutine eoshift_local(arr, sh, shifted_arr)
     !$acc routine seq
-    real(kind=dp_t), intent(in   ) :: arr(:)
+    real(kind=dp_t), intent(in   ) :: arr(0:)
     integer,         intent(in   ) :: sh
-    real(kind=dp_t), intent(  out) :: shifted_arr(:)
+    real(kind=dp_t), intent(  out) :: shifted_arr(0:)
     
-    integer :: i
+    integer :: i, hi_arr, hi_shift
+
+    !TODO: These should be the same size, maybe do a consistency check here
+    hi_arr = size(arr) - 1
+    hi_shift = size(shifted_arr) - 1
 
     !shifted_arr = 0.0
-    do i = 1, size(shifted_arr)
+    do i = 1, hi_shift
        shifted_arr(i) = 0.0
     enddo
 
     if(sh > 0) then
-       do i = 1, size(arr) - sh
+       do i = 0, hi_arr - sh
           shifted_arr(i) = arr(i+sh)
        enddo
     else if(sh < 0) then
-       do i = size(arr), abs(sh), -1
+       do i = hi_arr, abs(sh), -1
           shifted_arr(i) = arr(i+sh)
        enddo
     end if
