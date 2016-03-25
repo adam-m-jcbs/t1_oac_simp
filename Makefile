@@ -1,29 +1,43 @@
-FCOMP ?= PGI
+FCOMP ?= PGI-titan
 ACC ?= t
 
-ifeq ($(FCOMP),PGI)
-  #PGI
-  #F90     = ftn
-  #FFLAGS  = -module build -Ibuild -acc -Minfo=acc -ta=nvidia
+ifeq ($(FCOMP),PGI-local)
+  #For local workstation installations of PGI compilers
   F90     = pgf95
 
   ifdef ACC
-    #FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell,managed
     FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell
+   
+    #You can use this set of flags to play with PGI's beta implementation of managed memory on NVIDIA cards	
+	 #FFLAGS  = -module build -Ibuild -acc -Minfo=acc -Mcuda=cuda7.0 -ta=nvidia:maxwell,managed
   else
     FFLAGS  = -module build -Ibuild -g -O0
   endif
-
+else ifeq ($(FCOMP),PGI-titan)
+  #For compiling with PGI on OLCF's Titan
+  #Note, this has been tested with the following modules:
+  #   PrgEnv-pgi (the default version loaded)
+  #   pgi/16.1.lustre  (from Dave Norton's set of PGI modules, add `/autofs/nccs-svm1_home1/norton/.modules` to $MODULEPATH
+  #   cudatoolkit
+  F90     = ftn
+  
+  ifdef ACC
+	 #Note that the appropriate -ta should be implied in the `ftn` wrapper on Titan
+    FFLAGS  = -module build -Ibuild -acc -Minfo=acc
+  else
+    FFLAGS  = -module build -Ibuild -g -O0 -noacc
+  endif
 else ifeq ($(FCOMP),GNU)
-  #GNU
   F90     = gfortran
   FFLAGS  = -Ibuild -Jbuild -g -Wall -Wno-unused-dummy-argument -O0 -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero,overflow,underflow -finit-real=snan
 
 else ifeq ($(FCOMP),Cray)
-  #Cray
   F90     = ftn
-  FFLAGS  = -Ibuild -Jbuild -h msgs -h acc -lcudart
- 
+  ifdef ACC
+    FFLAGS  = -Ibuild -Jbuild -h msgs -h acc -lcudart
+  else
+    FFLAGS  = -Ibuild -Jbuild -h msgs -h noacc
+  endif
 else
   $(error ERROR: compiler $(FCOMP) invalid)
 endif
